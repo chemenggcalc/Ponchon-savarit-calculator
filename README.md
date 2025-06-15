@@ -6,7 +6,7 @@ This repository contains:
 - **HTML/JavaScript implementation**: A user-friendly web interface for distillation calculations.
 - **Python implementation**: A reference version translated from the HTML calculator, using SciPy for numerical computations.
 
-Inspired by the calculator at [ChemEnggCalc.com](https://chemenggcalc.com/ponchon-savarit-calculator-distillation/), this project is open-source for educational and engineering use.
+Inspired by the calculator at [https://chemenggcalc.com/ponchon-savarit-diagram-calculator-distillation/](https://chemenggcalc.com/ponchon-savarit-calculator-distillation/), this project is open-source for educational and engineering use.
 
 ## Features
 - **Inputs**:
@@ -22,5 +22,5 @@ Inspired by the calculator at [ChemEnggCalc.com](https://chemenggcalc.com/poncho
 - **Python Backend**: Replicates calculations with NumPy, SciPy, and Plotly.
 
 ## Demo
-Access the calculator online at
+Access the calculator online at [https://chemenggcalc.com/ponchon-savarit-diagram-calculator-distillation/](https://chemenggcalc.com/ponchon-savarit-calculator-distillation/)
 
