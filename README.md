@@ -22,5 +22,5 @@ Inspired by the calculator at [https://chemenggcalc.com/ponchon-savarit-diagram-
 - **Python Backend**: Replicates calculations with NumPy, SciPy, and Plotly.
 
 ## Demo
-Access the calculator online at [https://chemenggcalc.github.io/Ponchon-savarit-calculator/]([https://chemenggcalc.com/ponchon-savarit-calculator-distillation/](https://chemenggcalc.github.io/Ponchon-savarit-calculator/)
+Access the calculator online at [https://chemenggcalc.github.io/Ponchon-savarit-calculator/](https://chemenggcalc.github.io/Ponchon-savarit-calculator/)
 
