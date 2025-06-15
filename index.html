@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ponchon-Savarit Diagram Calculator by ChemEnggCalc</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: white;
+            color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 1260px;
+            width: 100%;
+            background-color: #ffffff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0.1, 0.1, 0.1, 0.1);
+        }
+        h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .main-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .input-section {
+            flex: 0 0 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .plot-section {
+            flex: 1;
+            min-width: 0;
+        }
+        .input-field, .json-section {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #475569;
+        }
+        input, textarea {
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background-color: #f9fafb;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 14px;
+            color: #ffffff;
+            background-color: #1e40af;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        button:hover {
+            background-color: #1e3a8a;
+        }
+        #error {
+            color: #b91c1c;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        #data-status {
+            color: #15803d;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        #enthalpyDiagram {
+            width: 100%;
+            height: 600px;
+        }
+        .results-section {
+            margin-top: 20px;
+            width: 100%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            text-align: center;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f3f4f6;
+            color: #1e293b;
+        }
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        @media (max-width: 768px) {
+            .main-section {
+                flex-direction: column;
+                
+            }
+            .input-section {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Ponchon-Savarit Diagram Calculator by ChemEnggCalc</h2>
+	<p style="text-align: center; font-size: 14px; color: #475569; margin-bottom: 20px;">
+        This ChemEnggCalc Ponchon-Savarit Diagram tool designs binary distillation columns, calculating theoretical stages, feed stage, duties, and minimum reflux ratio with an interactive H-x,y plot.
+    </p>
+        <div class="main-section">
+            <div class="input-section">
+                <div class="input-field">
+                    <label for="zf">Feed Composition (z_F, mole fraction)</label>
+                    <input type="number" id="zf" step="0.01" value="0.42">
+                </div>
+                <div class="input-field">
+                    <label for="F">Feed Flow Rate (F, kmol/hr)</label>
+                    <input type="number" id="F" step="0.1" value="10">
+                </div>
+                <div class="input-field">
+                    <label for="xd">Distillate Composition (x_D, mole fraction)</label>
+                    <input type="number" id="xd" step="0.01" value="0.97">
+                </div>
+                <div class="input-field">
+                    <label for="xw">Bottoms Composition (x_W, mole fraction)</label>
+                    <input type="number" id="xw" step="0.01" value="0.01">
+                </div>
+                <div class="input-field">
+                    <label for="q">Feed Thermal Condition (q, 0 to 1)</label>
+                    <input type="number" id="q" step="0.01" value="1">
+                </div>
+                <div class="input-field">
+                    <label for="R">Reflux Ratio (R, dimensionless)</label>
+                    <input type="number" id="R" step="0.01" value="2.50">
+                </div>
+                <div class="json-section">
+                    <label for="json-input">VLE and Enthalpy Data (JSON format)</label>
+                    <textarea id="json-input" placeholder='{
+  "xData": [0, 0.08, 0.18, 0.25, 0.49, 0.65, 0.79, 0.91, 1.0],
+  "yData": [0, 0.28, 0.43, 0.51, 0.73, 0.83, 0.90, 0.96, 1.0],
+  "Hl": [24.3, 24.1, 23.2, 22.8, 22.05, 21.75, 21.7, 21.6, 21.4],
+  "Hv": [61.2, 59.6, 58.5, 58.1, 56.5, 55.2, 54.4, 53.8, 53.3]
+}'></textarea>
+                    <button onclick="loadJsonData()">Load JSON Data</button>
+                    <div id="data-status"></div>
+                </div>
+                <div id="error"></div>
+            </div>
+            <div class="plot-section">
+                <div id="enthalpyDiagram"></div>
+            </div>
+        </div>
+        <div class="results-section">
+            <div id="results"></div>
+        </div>
+    <footer style="text-align: center; margin-top: 20px; font-size: 14px; color: #475569;">
+    © 2025 chemenggcalc.com. All rights reserved. | Disclaimer: For educational purposes only, not for commercial use.
+</footer>
+</div>
+    </div>
+    <script>
+        // Default data
+        const defaultData = {
+            xData: [0, 0.08, 0.18, 0.25, 0.49, 0.65, 0.79, 0.91, 1.0],
+            yData: [0, 0.28, 0.43, 0.51, 0.73, 0.83, 0.90, 0.96, 1.0],
+            Hl: [24.3, 24.1, 23.2, 22.8, 22.05, 21.75, 21.7, 21.6, 21.4],
+            Hv: [61.2, 59.6, 58.5, 58.1, 56.5, 55.2, 54.4, 53.8, 53.3]
+        };
+
+        // Current data
+        let currentData = { ...defaultData };
+
+        // Linear interpolation function
+        function linearInterpolate(x, xValues, yValues) {
+            if (!xValues || !yValues || xValues.length !== yValues.length) return NaN;
+            if (x <= xValues[0]) return yValues[0];
+            if (x >= xValues[xValues.length - 1]) return yValues[yValues.length - 1];
+            for (let i = 0; i < xValues.length - 1; i++) {
+                if (x >= xValues[i] && x <= xValues[i + 1]) {
+                    const frac = (x - xValues[i]) / (xValues[i + 1] - xValues[i]);
+                    return yValues[i] + frac * (yValues[i + 1] - yValues[i]);
+                }
+            }
+            return NaN;
+        }
+
+        // Cubic interpolation function
+        function cubicInterpolate(x, xValues, yValues) {
+            if (!xValues || !yValues || xValues.length !== yValues.length || xValues.length < 4) return NaN;
+            if (x < xValues[0] || x > xValues[xValues.length - 1]) return NaN;
+
+            // Find the interval
+            let i = 0;
+            while (i < xValues.length - 1 && x > xValues[i + 1]) i++;
+            const start = Math.max(0, i - 1);
+            const end = Math.min(xValues.length, start + 4);
+            const points = Math.min(4, end - start);
+
+            if (points < 4) return linearInterpolate(x, xValues, yValues); // Fallback to linear if insufficient points
+
+            // Extract local points
+            const xLocal = xValues.slice(start, start + points);
+            const yLocal = yValues.slice(start, start + points);
+
+            // Fit a cubic polynomial (using least-squares for 4 points)
+            const n = points;
+            const X = [];
+            for (let j = 0; j < n; j++) {
+                X.push([xLocal[j] ** 3, xLocal[j] ** 2, xLocal[j], 1]);
+            }
+            const Y = yLocal.map(y => [y]);
+
+            // Solve X * coeffs = Y using least squares
+            const XT = transpose(X);
+            const XTX = matrixMultiply(XT, X);
+            const XTY = matrixMultiply(XT, Y);
+            const coeffs = solveLinearSystem(XTX, XTY);
+
+            if (!coeffs) return NaN;
+
+            // Evaluate polynomial at x
+            const [a, b, c, d] = coeffs.map(c => c[0]);
+            return a * x ** 3 + b * x ** 2 + c * x + d;
+        }
+
+        // Matrix transpose
+        function transpose(matrix) {
+            return matrix[0].map((_, i) => matrix.map(row => row[i]));
+        }
+
+        // Matrix multiplication
+        function matrixMultiply(A, B) {
+            const result = Array(A.length).fill().map(() => Array(B[0].length).fill(0));
+            for (let i = 0; i < A.length; i++) {
+                for (let j = 0; j < B[0].length; j++) {
+                    for (let k = 0; k < A[0].length; k++) {
+                        result[i][j] += A[i][k] * B[k][j];
+                    }
+                }
+            }
+            return result;
+        }
+
+        // Solve linear system using Gaussian elimination
+        function solveLinearSystem(A, B) {
+            const n = A.length;
+            const augmented = A.map((row, i) => [...row, B[i][0]]);
+
+            // Forward elimination
+            for (let i = 0; i < n; i++) {
+                let maxEl = Math.abs(augmented[i][i]);
+                let maxRow = i;
+                for (let k = i + 1; k < n; k++) {
+                    if (Math.abs(augmented[k][i]) > maxEl) {
+                        maxEl = Math.abs(augmented[k][i]);
+                        maxRow = k;
+                    }
+                }
+
+                if (maxEl < 1e-10) return null; // Singular matrix
+
+                if (maxRow !== i) {
+                    [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
+                }
+
+                for (let k = i + 1; k < n; k++) {
+                    const c = -augmented[k][i] / augmented[i][i];
+                    for (let j = i; j <= n; j++) {
+                        if (i === j) {
+                            augmented[k][j] = 0;
+                        } else {
+                            augmented[k][j] += c * augmented[i][j];
+                        }
+                    }
+                }
+            }
+
+            // Back substitution
+            const x = Array(n).fill(0);
+            for (let i = n - 1; i >= 0; i--) {
+                x[i] = augmented[i][n] / augmented[i][i];
+                for (let k = i - 1; k >= 0; k--) {
+                    augmented[k][n] -= augmented[k][i] * x[i];
+                }
+            }
+            return x.map(val => [val]);
+        }
+
+        // Bisection method to find root
+        function bisection(func, a, b, tol = 1e-6, maxIter = 100) {
+            if (func(a) * func(b) >= 0) return NaN; // No root in interval
+            let c;
+            for (let i = 0; i < maxIter; i++) {
+                c = (a + b) / 2;
+                const fc = func(c);
+                if (Math.abs(fc) < tol || (b - a) / 2 < tol) return c;
+                if (func(a) * fc < 0) {
+                    b = c;
+                } else {
+                    a = c;
+                }
+            }
+            return c;
+        }
+
+        // Validate JSON data
+        function validateJsonData(data) {
+            const errorElement = document.getElementById('error');
+            if (!data.xData || !data.yData || !data.Hl || !data.Hv) {
+                errorElement.innerHTML = 'JSON must contain xData, yData, Hl, and Hv arrays.';
+                return false;
+            }
+            const length = data.xData.length;
+            if (
+                !Array.isArray(data.xData) ||
+                !Array.isArray(data.yData) ||
+                !Array.isArray(data.Hl) ||
+                !Array.isArray(data.Hv) ||
+                data.yData.length !== length ||
+                data.Hl.length !== length ||
+                data.Hv.length !== length ||
+                length < 4
+            ) {
+                errorElement.innerHTML = 'All arrays must be non-empty, of equal length, and contain at least 4 points for cubic interpolation.';
+                return false;
+            }
+            for (let i = 0; i < length; i++) {
+                if (
+                    !isFinite(data.xData[i]) ||
+                    !isFinite(data.yData[i]) ||
+                    !isFinite(data.Hl[i]) ||
+                    !isFinite(data.Hv[i])
+                ) {
+                    errorElement.innerHTML = 'All values must be finite numbers.';
+                    return false;
+                }
+                if (data.xData[i] < 0 || data.xData[i] > 1 || data.yData[i] < 0 || data.yData[i] > 1) {
+                    errorElement.innerHTML = 'xData and yData values must be between 0 and 1.';
+                    return false;
+                }
+                if (i > 0) {
+                    if (data.xData[i] <= data.xData[i - 1]) {
+                        errorElement.innerHTML = 'xData values must be monotonically increasing.';
+                        return false;
+                    }
+                    if (data.yData[i] <= data.yData[i - 1]) {
+                        errorElement.innerHTML = 'yData values must be monotonically increasing.';
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // Load JSON data
+        function loadJsonData() {
+            const errorElement = document.getElementById('error');
+            const statusElement = document.getElementById('data-status');
+            errorElement.innerHTML = '';
+            statusElement.innerHTML = '';
+            const jsonInput = document.getElementById('json-input').value.trim();
+            if (!jsonInput) {
+                statusElement.innerHTML = 'No JSON input provided. Using default data.';
+                currentData = { ...defaultData };
+                calculate();
+                return;
+            }
+            let data;
+            try {
+                data = JSON.parse(jsonInput);
+            } catch (e) {
+                errorElement.innerHTML = 'Invalid JSON format.';
+                return;
+            }
+            if (validateJsonData(data)) {
+                currentData = {
+                    xData: [...data.xData],
+                    yData: [...data.yData],
+                    Hl: [...data.Hl],
+                    Hv: [...data.Hv]
+                };
+                statusElement.innerHTML = 'JSON data loaded successfully.';
+                calculate();
+            } else {
+                statusElement.innerHTML = 'Using default data due to invalid JSON.';
+                currentData = { ...defaultData };
+                calculate();
+            }
+        }
+
+        // Debounce function
+        let debounceTimeout;
+        function debounceCalculate() {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(calculate, 300);
+        }
+
+        // Add real-time event listeners
+        ['zf', 'F', 'xd', 'xw', 'q', 'R'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', debounceCalculate);
+            }
+        });
+
+        function calculate() {
+            const errorElement = document.getElementById('error');
+            errorElement.innerHTML = '';
+
+            // Parse inputs
+            const zF = parseFloat(document.getElementById('zf').value);
+            const F = parseFloat(document.getElementById('F').value);
+            const xD = parseFloat(document.getElementById('xd').value);
+            const xW = parseFloat(document.getElementById('xw').value);
+            const q = parseFloat(document.getElementById('q').value);
+            const R = parseFloat(document.getElementById('R').value);
+
+            // Validate inputs
+            if (!isFinite(zF) || !isFinite(F) || !isFinite(xD) || !isFinite(xW) || !isFinite(q) || !isFinite(R)) {
+                errorElement.innerHTML = 'All inputs must be valid numbers.';
+                resetPlot();
+                return;
+            }
+            if (F <= 0 || zF < 0 || zF > 1 || xD < 0 || xD > 1 || xW < 0 || xW > 1 || q < 0 || q > 1 || R < 0) {
+                errorElement.innerHTML = 'Invalid input values (0 ≤ compositions, q ≤ 1, F > 0, R ≥ 0).';
+                resetPlot();
+                return;
+            }
+            if (Math.abs(xD - xW) < 1e-6) {
+                errorElement.innerHTML = 'Distillate and bottoms compositions must be different.';
+                resetPlot();
+                return;
+            }
+            if (xD <= zF || zF <= xW) {
+                errorElement.innerHTML = 'Compositions must satisfy x_W < z_F < x_D.';
+                resetPlot();
+                return;
+            }
+
+            // Calculate enthalpies
+            const yF = cubicInterpolate(zF, currentData.xData, currentData.yData);
+            const HLzF = linearInterpolate(zF, currentData.xData, currentData.Hl);
+            const HVzF = cubicInterpolate(yF, currentData.yData, currentData.Hv);
+            const HF = q * HLzF + (1 - q) * HVzF;
+            const HD = linearInterpolate(xD, currentData.xData, currentData.Hl);
+            const HW = linearInterpolate(xW, currentData.xData, currentData.Hl);
+
+            // Validate calculated values
+            if (!isFinite(yF) || !isFinite(HLzF) || !isFinite(HVzF) || !isFinite(HF) || !isFinite(HD) || !isFinite(HW)) {
+                errorElement.innerHTML = 'Interpolation failed. Ensure compositions are within valid range of input data.';
+                resetPlot();
+                return;
+            }
+
+            // Material balance
+            const D = F * (zF - xW) / (xD - xW);
+            const W = F - D;
+            if (!isFinite(D) || !isFinite(W) || D < 0 || W < 0) {
+                errorElement.innerHTML = 'Invalid material balance. Check input compositions.';
+                resetPlot();
+                return;
+            }
+
+            // Condenser duty
+            const HVxD = cubicInterpolate(xD, currentData.yData, currentData.Hv);
+            if (!isFinite(HVxD)) {
+                errorElement.innerHTML = 'Failed to calculate vapor enthalpy for x_D.';
+                resetPlot();
+                return;
+            }
+            const Qc = D * (HVxD - HD) * (R + 1); // MJ/hr
+            const QcKW = Qc * 0.27778; // Convert to kW
+            const xDeltaR = xD;
+            const HDeltaR = HD + Qc / D; // Q' = HDeltaR
+            if (!isFinite(Qc) || !isFinite(HDeltaR)) {
+                errorElement.innerHTML = 'Failed to calculate condenser duty or Δ_R.';
+                resetPlot();
+                return;
+            }
+
+            // Stripping difference point (Δ_S)
+            const xDeltaS = xW;
+            const slope = (HDeltaR - HF) / (xDeltaR - zF);
+            const HDeltaS = HF + slope * (xDeltaS - zF);
+            if (!isFinite(HDeltaS)) {
+                errorElement.innerHTML = 'Failed to calculate Δ_S point.';
+                resetPlot();
+                return;
+            }
+
+            // Reboiler duty
+            const Qr = W * (HW - HDeltaS); // MJ/hr
+            const QrKW = Qr * 0.27778; // Convert to kW
+            if (!isFinite(Qr)) {
+                errorElement.innerHTML = 'Failed to calculate reboiler duty.';
+                resetPlot();
+                return;
+            }
+
+            // Minimum reflux calculations
+            const yFMin = cubicInterpolate(zF, currentData.xData, currentData.yData);
+            const HVyF = cubicInterpolate(yFMin, currentData.yData, currentData.Hv);
+            if (!isFinite(yFMin) || !isFinite(HVyF)) {
+                errorElement.innerHTML = 'Failed to calculate y_F or H_V(y_F) for minimum reflux.';
+                resetPlot();
+                return;
+            }
+            const slopeMin = (HVyF - HF) / (yFMin - zF);
+            if (!isFinite(slopeMin)) {
+                errorElement.innerHTML = 'Failed to calculate slope for minimum reflux line.';
+                resetPlot();
+                return;
+            }
+            const QPrimeMin = HF + slopeMin * (xD - zF);
+            const QDoublePrimeMin = HF + slopeMin * (xW - zF);
+            if (!isFinite(QPrimeMin) || !isFinite(QDoublePrimeMin)) {
+                errorElement.innerHTML = 'Failed to calculate minimum reflux intersection points.';
+                resetPlot();
+                return;
+            }
+            const RMin = (QPrimeMin - HVxD) / (HVxD - HD);
+            if (!isFinite(RMin)) {
+                errorElement.innerHTML = 'Failed to calculate minimum reflux ratio.';
+                resetPlot();
+                return;
+            }
+            if (RMin < 0) {
+                errorElement.innerHTML = 'Negative minimum reflux ratio. Check input compositions and VLE data.';
+                resetPlot();
+                return;
+            }
+
+            // Calculate chart bounds
+            const yValues = [...currentData.Hl, ...currentData.Hv, HF, HD, HW, HDeltaR, HDeltaS, QPrimeMin, QDoublePrimeMin, HVyF].filter(v => isFinite(v));
+            const yMin = Math.min(...yValues) - 10;
+            const yMax = Math.max(...yValues) + 10;
+            const xValues = [zF, xD, xW, xDeltaR, xDeltaS, yFMin, ...currentData.xData, ...currentData.yData].filter(v => isFinite(v));
+            const xMin = Math.min(...xValues) - 0.01;
+            const xMax = Math.max(...xValues) + 0.01;
+
+            // Define y-range for x_D, x_W lines
+            const HlMin = Math.min(...currentData.Hl);
+            const HvMax = Math.max(...currentData.Hv);
+            const xDLineY = [yMin, yMax];
+            const xWLineY = [yMin, yMax];
+
+            // Stage construction
+            const {stages, stagePoints, feedStage, tieLines, constructionLines, stageCompositions} = calculateStages(xD, xW, zF, HF, q, R, D, W, xDeltaR, HDeltaR, xDeltaS, HDeltaS);
+            if (stages === 0 || stagePoints.length < 2) {
+                errorElement.innerHTML = 'Failed to calculate stages. Check input data and compositions.';
+                resetPlot();
+                return;
+            }
+
+            // Prepare Plotly data
+            const plotData = [
+                // Saturated Liquid Line
+                {
+                    x: currentData.xData,
+                    y: currentData.Hl,
+                    mode: 'lines+markers',
+                    line: { color: '#1e40af', width: 3.5 },
+                    marker: { size: 6, color: '#1e40af', symbol: 'circle' },
+                    hovertemplate: 'x: %{x:.2f}<br>H_L: %{y:.2f} MJ/kmol',
+                    name: 'Saturated Liquid'
+                },
+                // Saturated Vapor Line
+                {
+                    x: currentData.yData,
+                    y: currentData.Hv,
+                    mode: 'lines+markers',
+                    line: { color: '#b91c1c', width: 3.5 },
+                    marker: { size: 6, color: '#b91c1c', symbol: 'circle' },
+                    hovertemplate: 'y: %{x:.2f}<br>H_V: %{y:.2f} MJ/kmol',
+                    name: 'Saturated Vapor'
+                },
+                // Vertical Line at x_W
+                {
+                    x: [xW, xW],
+                    y: xWLineY,
+                    mode: 'lines',
+                    line: { color: '#475569', width: 1.5, dash: 'dot' },
+                    name: 'x_W Line'
+                },
+                // Vertical Line at x_D
+                {
+                    x: [xD, xD],
+                    y: xDLineY,
+                    mode: 'lines',
+                    line: { color: '#475569', width: 1.5, dash: 'dot' },
+                    name: 'x_D Line'
+                },
+                
+                // Difference Points (Δ_R, Δ_S)
+                {
+                    x: [xDeltaR, xDeltaS],
+                    y: [HDeltaR, HDeltaS],
+                    mode: 'markers+text',
+                    marker: { color: '#f59e0b', size: 10, symbol: 'star' },
+                    text: ['Δ_R', 'Δ_S'],
+                    textposition: ['middle top', 'middle bottom'],
+                    textfont: { size: 14, color: '#f59e0b', family: 'Inter, sans-serif' },
+                    hovertemplate: '(%{x:.2f}, %{y:.2f} MJ/kmol)',
+                    name: 'Difference Points'
+                },
+                // Operating Line
+                {
+                    x: [zF, xDeltaR, xDeltaS],
+                    y: [HF, HDeltaR, HDeltaS],
+                    mode: 'lines',
+                    line: { color: 'blue', width: 2.0 },
+                    hovertemplate: '(%{x:.2f}, %{y:.2f} MJ/kmol)',
+                    name: 'Operating Line'
+                },
+                // Minimum Reflux Line
+                {
+                    x: [xW, zF, yFMin, xD],
+                    y: [QDoublePrimeMin, HF, HVyF, QPrimeMin],
+                    mode: 'lines',
+                    line: { color: 'light blue', width: 2, dash: 'dash' },
+                    hovertemplate: '(%{x:.2f}, %{y:.2f} MJ/kmol)',
+                    name: 'Minimum Reflux Line'
+                },
+                // Δ_R min and Δ_S min Points
+                {
+                    x: [xD, xW],
+                    y: [QPrimeMin, QDoublePrimeMin],
+                    mode: 'markers+text',
+                    marker: { color: '#22c55e', size: 8, symbol: 'star-diamond' },
+                    text: ['Δ_R min', 'Δ_S min'],
+                    textposition: ['middle left', 'middle right'],
+                    textfont: { size: 14, color: 'red', family: 'Inter, sans-serif' },
+                    hovertemplate: '(%{x:.2f}, %{y:.2f} MJ/kmol)',
+                    name: 'Min Difference Points'
+                }
+            ];
+
+            // Add tie lines (stages, black, bold)
+            tieLines.forEach((tieLine, index) => {
+                plotData.push({
+                    x: tieLine.x,
+                    y: tieLine.y,
+                    mode: 'lines',
+                    line: { color: 'black', width: 2.5 },
+                    hovertemplate: 'Stage %{text}<br>(%{x:.2f}, %{y:.2f} MJ/kmol)',
+                    text: [`Stage ${index + 1}`],
+                    name: `Stage ${index + 1}`
+                });
+            });
+
+            // Add construction lines (purple, from delta points)
+            constructionLines.forEach((constLine, index) => {
+                plotData.push({
+                    x: constLine.x,
+                    y: constLine.y,
+                    mode: 'lines',
+                    line: { color: 'brown', width: 1.75, dash: 'dot' },
+                    hovertemplate: 'Construction Line %{text}<br>(%{x:.2f}, %{y:.2f} MJ/kmol)',
+                    text: [`Stage ${index + 1}`],
+                    name: `Construction Line ${index + 1}`
+                });
+            });
+
+            // Plotly layout
+            const layout = {
+    xaxis: {
+        title: {
+            text: 'Mole Fraction (x or y)',
+            font: { size: 16, family: 'Inter, sans-serif', color: '#1e293b' },
+            standoff: 5
+        },
+        tickfont: { size: 12, color: '#1e293b' },
+        range: [xMin, xMax],
+        gridcolor: '#e5e7eb',
+        zerolinecolor: '#475569',
+        ticktext: [...currentData.xData, xD, xW, yFMin].filter(v => isFinite(v)).map(x => x.toFixed(2))
+    },
+    yaxis: {
+        title: {
+            text: 'Enthalpy (MJ/kmol)',
+            font: { size: 16, family: 'Inter, sans-serif', color: '#1e293b' }
+        },
+        tickfont: { size: 12, color: '#1e293b' },
+        range: [yMin, yMax],
+        gridcolor: '#e5e7eb',
+        zerolinecolor: '#475569'
+    },
+    showlegend: false,
+    legend: {
+        x: 1,
+        y: 1,
+        xanchor: 'right',
+        yanchor: 'top',
+        bgcolor: 'rgba(255, 255, 255, 0.8)',
+        bordercolor: '#1e293b',
+        borderwidth: 1
+    },
+    margin: { t: 50, b: 80, l: 80, r: 40 },
+    hovermode: 'closest',
+    paper_bgcolor: '#ffffff',
+    plot_bgcolor: 'white',
+    annotations: [
+        {
+            text: '© 2025 chemenggcalc.com',
+            xref: 'paper', // Relative to the plot area
+            yref: 'paper',
+            x: 0.90, // Near the right edge
+            y: 0.10, // Near the bottom edge
+            showarrow: false,
+            font: {
+                size: 16,
+                color: 'rgba(0, 0, 0, 0.5)', // Semi-transparent for watermark effect
+                family: 'Inter, sans-serif'
+            },
+            xanchor: 'right',
+            yanchor: 'bottom'
+        }
+    ],
+    shapes: [
+        {
+            type: 'rect',
+            xref: 'paper',
+            yref: 'paper',
+            x0: 0, y0: 0, x1: 1, y1: 1,
+            line: { color: '#1e293b', width: 2 },
+            fillcolor: 'rgba(0, 0, 0, 0)'
+        }
+    ]
+};
+            // Render Plotly plot
+            try {
+                Plotly.newPlot('enthalpyDiagram', plotData, layout, {
+                    responsive: true,
+                    displayModeBar: true
+                });
+            } catch (err) {
+                console.error('Plotly rendering error:', err);
+                errorElement.innerHTML = 'Error rendering plot. Please check inputs.';
+                return;
+            }
+
+            // Display results in table
+            let stageTableRows = '';
+            stageCompositions.forEach((stage, index) => {
+                stageTableRows += `
+                    <tr>
+                        <td>Stage ${index + 1}</td>
+                        <td>x: ${stage.x.toFixed(3)}, y: ${stage.y.toFixed(3)}</td>
+                        <td>Mole fraction</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('results').innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Value</th>
+                            <th>Unit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                        <tr>
+                            <td>Distillate Flow Rate (D)</td>
+                            <td>${D.toFixed(2)}</td>
+                            <td>kmol/hr</td>
+                        </tr>
+                        <tr>
+                            <td>Bottoms Flow Rate (W)</td>
+                            <td>${W.toFixed(2)}</td>
+                            <td>kmol/hr</td>
+                        </tr>
+                        <tr>
+                            <td>Rectifying Difference Point (Δ_R)</td>
+                            <td>(${xDeltaR.toFixed(2)}, ${HDeltaR.toFixed(2)})</td>
+                            <td>(Mole fraction, MJ/kmol)</td>
+                        </tr>
+                        <tr>
+                            <td>Stripping Difference Point (Δ_S)</td>
+                            <td>(${xDeltaS.toFixed(2)}, ${HDeltaS.toFixed(2)})</td>
+                            <td>(Mole fraction, MJ/kmol)</td>
+                        </tr>
+                        <tr>
+                            <td>Condenser Duty (Q_C)</td>
+                            <td>${QcKW.toFixed(2)}</td>
+                            <td>kW</td>
+                        </tr>
+                        <tr>
+                            <td>Reboiler Duty (Q_R)</td>
+                            <td>${QrKW.toFixed(2)}</td>
+                            <td>kW</td>
+                        </tr>
+                        <tr>
+                            <td>Δ_R min (x_D, Q'_min)</td>
+                            <td>(${xD.toFixed(2)}, ${QPrimeMin.toFixed(2)})</td>
+                            <td>(Mole fraction, MJ/kmol)</td>
+                        </tr>
+                        <tr>
+                            <td>Δ_S min (x_W, Q''_min)</td>
+                            <td>(${xW.toFixed(2)}, ${QDoublePrimeMin.toFixed(2)})</td>
+                            <td>(Mole fraction, MJ/kmol)</td>
+                        </tr>
+                        <tr>
+                            <td>Minimum Reflux Ratio (R_min)</td>
+                            <td>${RMin.toFixed(2)}</td>
+                            <td>Dimensionless</td>
+                        </tr>
+                        <tr>
+                            <td>Number of Theoretical Stages</td>
+                            <td>${stages} (Feed Stage: ${feedStage})</td>
+                            <td>Dimensionless</td>
+                        </tr>
+                        ${stageTableRows}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function resetPlot() {
+            Plotly.newPlot('enthalpyDiagram', [], {
+                xaxis: { range: [0, 1], title: 'Mole Fraction (x or y)' },
+                yaxis: { range: [0, 70], title: 'Enthalpy (MJ/kmol)' },
+                paper_bgcolor: '#ffffff',
+                plot_bgcolor: 'white'
+            });
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function calculateStages(xD, xW, zF, HF, q, R, D, W, xDeltaR, HDeltaR, xDeltaS, HDeltaS) {
+            const errorElement = document.getElementById('error');
+            let y = xD; // Start with y_1 = x_D
+            let stages = 0;
+            const stagePoints = [{ x: xD, y: cubicInterpolate(xD, currentData.yData, currentData.Hv) }]; // Start at vapor point (y_1, H_V(y_1))
+            const tieLines = []; // Store tie line coordinates for plotting (stages)
+            const constructionLines = []; // Store construction line coordinates
+            const stageCompositions = []; // Store x_n, y_n for each stage
+            let inRectifying = true;
+            let feedStage = 0;
+
+            while (stages < 100) {
+                // Step 1: Find x_n from y_n using equilibrium data y = f(x)
+                let x_n;
+                const findX = x => cubicInterpolate(x, currentData.xData, currentData.yData) - y;
+                x_n = bisection(findX, 0, 1);
+                if (!isFinite(x_n) || x_n < 0 || x_n > 1) {
+                    errorElement.innerHTML = `Stage ${stages + 1}: Invalid liquid composition (x=${x_n.toFixed(3)}). Check VLE data range.`;
+                    break;
+                }
+
+                // Step 2: Check if x_n has reached or passed x_W
+                if (x_n <= xW) {
+                    // Add final stage at x_W
+                    const HLxW = linearInterpolate(xW, currentData.xData, currentData.Hl);
+                    if (isFinite(HLxW)) {
+                        stagePoints.push({ x: xW, y: HLxW });
+                        tieLines.push({
+                            x: [xW, y],
+                            y: [HLxW, cubicInterpolate(y, currentData.yData, currentData.Hv)]
+                        });
+                        stageCompositions.push({ x: xW, y: y });
+                        stages++;
+                    }
+                    break; // Stop construction
+                }
+
+                // Step 3: Locate enthalpy on saturated liquid line for x_n
+                const HLx_n = linearInterpolate(x_n, currentData.xData, currentData.Hl);
+                if (!isFinite(HLx_n)) {
+                    errorElement.innerHTML = `Stage ${stages + 1}: Failed to interpolate liquid enthalpy for x=${x_n.toFixed(3)}.`;
+                    break;
+                }
+
+                // Add liquid point (x_n, H_L(x_n))
+                stagePoints.push({ x: x_n, y: HLx_n });
+
+                // Step 4: Draw tie line (stage) between (x_n, H_L(x_n)) and (y_n, H_V(y_n))
+                const HVy_n = cubicInterpolate(y, currentData.yData, currentData.Hv);
+                if (!isFinite(HVy_n)) {
+                    errorElement.innerHTML = `Stage ${stages + 1}: Failed to interpolate vapor enthalpy for y=${y.toFixed(3)}.`;
+                    break;
+                }
+                tieLines.push({
+                    x: [x_n, y],
+                    y: [HLx_n, HVy_n]
+                });
+                stageCompositions.push({ x: x_n, y: y });
+                stages++; // Increment stage count for each tie line
+
+                // Step 5: Check if we've crossed the feed composition
+                if (inRectifying && x_n <= zF) {
+                    inRectifying = false;
+                    feedStage = stages;
+                }
+
+                // Step 6: Select difference point based on section
+                const xDelta = inRectifying ? xDeltaR : xDeltaS;
+                const HDelta = inRectifying ? HDeltaR : HDeltaS;
+
+                // Step 7: Calculate construction line slope
+                const tolerance = 1e-6;
+                if (Math.abs(x_n - xDelta) < tolerance) {
+                    errorElement.innerHTML = `Stage ${stages + 1}: Composition too close to difference point (x=${x_n.toFixed(3)}, xDelta=${xDelta.toFixed(3)}).`;
+                    break;
+                }
+                const slope = (HDelta - HLx_n) / (xDelta - x_n);
+                if (!isFinite(slope)) {
+                    errorElement.innerHTML = `Stage ${stages + 1}: Invalid slope calculation (HDelta=${HDelta.toFixed(2)}, HLx=${HLx_n.toFixed(2)}).`;
+                    break;
+                }
+
+                // Step 8: Find y_(n+1) by intersecting construction line with vapor line H_V(y)
+                const findY = y => cubicInterpolate(y, currentData.yData, currentData.Hv) - (HDelta + slope * (y - xDelta));
+                let yNext = bisection(findY, xW, xD);
+                if (!isFinite(yNext) || yNext < 0 || yNext > 1) {
+                    const yMin = Math.max(0, y - 0.2);
+                    const yMax = Math.min(1, y + 0.2);
+                    yNext = bisection(findY, yMin, yMax);
+                }
+                if (!isFinite(yNext) || yNext < 0 || yNext > 1) {
+                    errorElement.innerHTML = `Stage ${stages + 1}: Failed to find valid y_${stages + 2} (y=${yNext.toFixed(3)}).`;
+                    break;
+                }
+
+                // Step 9: Get vapor enthalpy for y_(n+1)
+                const HVyNext = cubicInterpolate(yNext, currentData.yData, currentData.Hv);
+                if (!isFinite(HVyNext)) {
+                    errorElement.innerHTML = `Stage ${stages + 1}: Failed to interpolate vapor enthalpy for y=${yNext.toFixed(3)}.`;
+                    break;
+                }
+                stagePoints.push({ x: yNext, y: HVyNext });
+
+                // Step 10: Calculate construction line endpoints
+                let xEnd, HEnd;
+                if (inRectifying) {
+                    // Intersect with saturated liquid line H_L(x)
+                    const findXEnd = x => linearInterpolate(x, currentData.xData, currentData.Hl) - (HDelta + slope * (x - xDelta));
+                    xEnd = bisection(findXEnd, 0, 1);
+                    if (!isFinite(xEnd) || xEnd < 0 || xEnd > 1) {
+                        errorElement.innerHTML = `Stage ${stages + 1}: Failed to find liquid line intersection (x=${xEnd.toFixed(3)}).`;
+                        break;
+                    }
+                    HEnd = linearInterpolate(xEnd, currentData.xData, currentData.Hl);
+                } else {
+                    // Intersect with saturated vapor line H_V(y) at y_(n+1)
+                    xEnd = yNext;
+                    HEnd = HVyNext;
+                }
+                if (!isFinite(HEnd)) {
+                    errorElement.innerHTML = `Stage ${stages + 1}: Invalid construction line endpoint enthalpy.`;
+                    break;
+                }
+
+                // Add construction line from delta point to endpoint
+                constructionLines.push({
+                    x: [xDelta, xEnd],
+                    y: [HDelta, HEnd]
+                });
+
+                y = yNext;
+            }
+
+            if (stages === 0 || stagePoints.length < 2) {
+                errorElement.innerHTML = 'Failed to calculate stages. Check input data, compositions, or VLE data range.';
+            }
+
+            return { stages, stagePoints, feedStage, tieLines, constructionLines, stageCompositions };
+        }
+
+        // Initial calculation
+        calculate();
+    </script>
+</body>
+</html>
